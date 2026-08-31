@@ -1,0 +1,28 @@
+Software Engineer — Backend
+
+We are looking for a Software Engineer with strong backend development experience to join our engineering team.
+
+Responsibilities:
+- Design and build scalable REST APIs using Python and Django or FastAPI
+- Write clean, testable code with unit tests and integration tests
+- Work with SQL and NoSQL databases (PostgreSQL, MongoDB)
+- Collaborate with the frontend team on API contracts
+- Participate in code reviews and maintain high code quality
+- Deploy and monitor services on AWS using Docker and Kubernetes
+- Contribute to CI/CD pipelines using GitHub Actions
+
+Required Skills:
+- Proficiency in Python (3+ years)
+- Experience with Django or FastAPI
+- Strong knowledge of SQL and PostgreSQL
+- Familiarity with Docker and containerisation
+- Understanding of REST API design principles
+- Version control with Git and GitHub
+- Problem solving and communication skills
+
+Preferred Skills:
+- Experience with MongoDB or Redis
+- Knowledge of AWS services (EC2, S3, Lambda)
+- Familiarity with Kubernetes
+- Experience with machine learning pipelines (scikit-learn, TensorFlow)
+- Knowledge of CI/CD and DevOps practices

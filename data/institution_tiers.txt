@@ -1,0 +1,79 @@
+# Top-tier educational institutions for institution tier bias audit.
+# One institution name per line (case-insensitive substring match against resume text).
+# Indian IITs / IIMs / NITs / IIITs
+IIT Bombay
+IIT Delhi
+IIT Madras
+IIT Kharagpur
+IIT Kanpur
+IIT Roorkee
+IIT Guwahati
+IIT Hyderabad
+IIT BHU
+IIT Gandhinagar
+IIT Indore
+IIT Jodhpur
+IIT Mandi
+IIT Patna
+IIT Ropar
+IIT Tirupati
+IIT Palakkad
+IIT Dharwad
+IIT Bhilai
+IIT Jammu
+IIM Ahmedabad
+IIM Bangalore
+IIM Calcutta
+IIM Lucknow
+IIM Kozhikode
+IIM Indore
+IIM Shillong
+IIM Udaipur
+IIM Ranchi
+BITS Pilani
+BITS Goa
+BITS Hyderabad
+NIT Trichy
+NIT Warangal
+NIT Surathkal
+NIT Calicut
+NIT Rourkela
+NIT Allahabad
+NIT Kurukshetra
+NIT Jaipur
+IIIT Hyderabad
+IIIT Bangalore
+IIIT Delhi
+IIIT Allahabad
+ISI Kolkata
+ISI Bangalore
+CMI Chennai
+TIFR
+# Top Global Universities
+MIT
+Stanford
+Harvard
+Cambridge
+Oxford
+Caltech
+Princeton
+Yale
+Columbia
+Cornell
+UC Berkeley
+Carnegie Mellon
+ETH Zurich
+NUS
+NTU
+Imperial College
+UCL
+Georgia Tech
+University of Michigan
+University of Toronto
+TU Munich
+EPFL
+University of Edinburgh
+University of Melbourne
+KAIST
+Peking University
+Tsinghua University

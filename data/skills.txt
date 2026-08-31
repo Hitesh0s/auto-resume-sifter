@@ -1,0 +1,205 @@
+# Programming Languages
+Python
+Java
+JavaScript
+TypeScript
+C
+C++
+C#
+Go
+Rust
+Ruby
+PHP
+Swift
+Kotlin
+Scala
+R
+MATLAB
+Perl
+Bash
+Shell
+PowerShell
+
+# Web Frameworks & Libraries
+React
+Angular
+Vue
+Next.js
+Node.js
+Express
+Django
+Flask
+FastAPI
+Spring Boot
+Spring
+Laravel
+Rails
+ASP.NET
+Svelte
+jQuery
+
+# Databases
+SQL
+MySQL
+PostgreSQL
+SQLite
+MongoDB
+Redis
+Elasticsearch
+Cassandra
+DynamoDB
+Oracle
+MS SQL Server
+MariaDB
+Firebase
+Firestore
+CouchDB
+
+# Cloud & DevOps
+AWS
+Azure
+GCP
+Google Cloud
+Docker
+Kubernetes
+Terraform
+Ansible
+Jenkins
+GitHub Actions
+CircleCI
+Travis CI
+Helm
+Linux
+Unix
+
+# Machine Learning & AI
+Machine Learning
+Deep Learning
+NLP
+Natural Language Processing
+Computer Vision
+TensorFlow
+PyTorch
+Keras
+Scikit-learn
+scikit-learn
+XGBoost
+LightGBM
+Hugging Face
+Transformers
+BERT
+GPT
+LLM
+Reinforcement Learning
+Feature Engineering
+Model Training
+Model Deployment
+MLOps
+
+# Data Science & Analytics
+Data Analysis
+Data Science
+Data Engineering
+Data Visualization
+Pandas
+NumPy
+Matplotlib
+Seaborn
+Plotly
+Tableau
+Power BI
+Jupyter
+Statistical Analysis
+A/B Testing
+Time Series
+ETL
+
+# Software Engineering Practices
+Agile
+Scrum
+Kanban
+CI/CD
+DevOps
+Microservices
+REST API
+RESTful
+GraphQL
+gRPC
+Design Patterns
+SOLID
+TDD
+BDD
+Unit Testing
+Integration Testing
+Code Review
+Git
+GitHub
+GitLab
+Bitbucket
+Version Control
+
+# Mobile Development
+Android
+iOS
+React Native
+Flutter
+Xamarin
+Swift
+Kotlin
+
+# Security
+Cybersecurity
+Penetration Testing
+OWASP
+Encryption
+OAuth
+JWT
+SSL
+TLS
+Firewalls
+
+# Tools & Platforms
+Linux
+Windows
+macOS
+VS Code
+IntelliJ
+Eclipse
+Jira
+Confluence
+Slack
+Postman
+Swagger
+NGINX
+Apache
+Hadoop
+Spark
+Kafka
+Airflow
+Celery
+
+# Soft Skills
+Communication
+Teamwork
+Leadership
+Problem Solving
+Critical Thinking
+Time Management
+Adaptability
+Collaboration
+Presentation
+Documentation
+Mentoring
+
+# Domains
+Computer Vision
+Robotics
+IoT
+Embedded Systems
+Blockchain
+AR
+VR
+Game Development
+UI/UX
+Figma
+Adobe XD
