@@ -46,7 +46,7 @@ The project was built entirely in Python using open-source libraries, with no ex
 | **Multi-mode resume input** | Upload individual files (PDF/TXT) or select a folder with a native OS picker |
 | **TF-IDF cosine scoring** | Corpus-level TF-IDF vectorisation; cosine similarity of each resume against the JD |
 | **Score normalisation** | Batch-relative ranking so the top candidate is always 100%; fixed thresholds remain meaningful regardless of corpus |
-| **Rubric scoring** | Weighted structured criteria (skills, education, experience, career gap, relocation); blended 70/30 with TF-IDF when a structured JD is used |
+| **Rubric scoring** | Required-skill coverage bonus + hard knockouts on degree/10th/12th/CGPA floors; blended 70/30 with TF-IDF when a structured JD is used |
 | **Tier classification** | Three tiers: Strong Match (≥ 70%), Partial Match (≥ 40%), Not Suitable (< 40%) |
 | **Gap analysis** | Per-candidate expanders for Partial matches showing matched/missing skills and a rule-based recommendation |
 | **Score analytics** | Interactive Plotly charts: score distribution histogram, top TF-IDF discriminating terms, skill coverage heatmap |
@@ -92,7 +92,7 @@ The project was built entirely in Python using open-source libraries, with no ex
     └───────────────────────────────────────────────────────┘
 ```
 
-**Session state** is used to pass data between pages without re-running the pipeline. After analysis, `st.session_state` holds: `ranked` (list of Candidate objects), `audit` (AuditResult), `jd_skills`, `rubric`, `vectorizer`, and `tfidf_matrix`. The Results and Bias Audit pages read directly from session state and guard against premature access.
+**Session state** carries data between pages without re-running the pipeline. After analysis, `st.session_state` holds `ranked` (list of Candidate objects), `audit` (AuditResult), `jd_skills`, `rubric`, `vectorizer`, and `tfidf_matrix`. The Results and Bias Audit pages read directly from session state and guard against being opened before analysis has run.
 
 ---
 
@@ -102,13 +102,12 @@ The project was built entirely in Python using open-source libraries, with no ex
 
 **File:** `src/preprocessor.py`
 
-Each resume and the JD undergo the same five-step pipeline before vectorisation:
+Each resume and the JD undergo the same four-step pipeline before vectorisation:
 
 1. **Lowercase** — `text.lower()`
-2. **Punctuation & digit removal** — regex `[^a-z\s]` strips everything except letters and whitespace
-3. **Tokenisation** — whitespace split
-4. **Lemmatisation** — spaCy `en_core_web_sm` model; each token is replaced with its dictionary base form (e.g., *running* → *run*, *universities* → *university*)
-5. **Stopword removal** — NLTK English stopword list (179 words); removes common words (*the*, *and*, *of*…) that carry no discriminating signal
+2. **Punctuation & digit removal** — punctuation characters (`string.punctuation`) are stripped, followed by a separate pass that strips digit runs (`\d+`)
+3. **Tokenisation & lemmatisation** — the cleaned string is passed into spaCy's `en_core_web_sm` pipeline (parser and NER disabled for speed), which tokenises and lemmatises in a single pass; each token is replaced with its dictionary base form (e.g., *running* → *run*, *universities* → *university*)
+4. **Stopword removal** — filtered against the NLTK English stopword list (198 words), dropping common words (*the*, *and*, *of*…) and any single-character lemma
 
 The output is a single cleaned string fed to the TF-IDF vectoriser.
 
@@ -147,6 +146,15 @@ similarity(JD, resume_i) = (JD · resume_i) / (||JD|| × ||resume_i||)
 
 The dot product of two L2-normalised TF-IDF vectors; 1.0 = identical, 0 = no shared terms.
 
+**Implementation choices:**
+
+| Parameter | Value | Reason |
+|---|---|---|
+| `ngram_range` | `(1,1)` — unigrams only | Bigrams inflate vocabulary ~4× and collapse cosine scores below 15% for small corpora |
+| `sublinear_tf` | `True` | Prevents high-frequency generic terms from dominating |
+| IDF corpus | JD + all resumes | Cross-candidate IDF; terms frequent in ALL resumes (e.g., *experience*) get low weight |
+| `max_features` | None (full vocabulary) | No truncation to preserve niche technical terms |
+
 **Raw score** = cosine similarity × 100. A strong match typically scores 25–45%; this is the inherent ceiling of TF-IDF cosine between two structurally different documents (a JD and a resume have different vocabulary distributions by nature).
 
 ---
@@ -173,15 +181,24 @@ The top scorer always gets 100%. All tiers and charts are based on the normalise
 
 When the user builds a JD via the Structured Form, a weighted rubric is generated alongside the JD text. The rubric evaluates each resume on explicit criteria and produces a 0–100 rubric score that is blended with the TF-IDF score.
 
-**Knockout rules:** When RubricResult.knockout is true, classifier.py forces final_score = 0.0 and the candidate is classified as Not Suitable.
+**Knockout checks** (failing any one sends the candidate straight to "Not Suitable"):
 
-**Final score blending:**
+| Check | Method |
+|---|---|
+| Degree requirement | Keyword match against the required degree level (e.g. "bachelor", "b.tech") in the resume text |
+| 10th grade % floor | Regex-extracted 10th/SSLC percentage compared against the JD's minimum |
+| 12th grade % floor | Regex-extracted 12th/HSC percentage compared against the JD's minimum |
+| CGPA floor | Regex-extracted CGPA (4.0-scale values normalised to a 10.0 scale) compared against the JD's minimum |
+
+**Skill-coverage bonus:** `bonus = (matched required skills) / (total required skills)`, a value from 0.0 to 1.0.
+
+A knockout is absolute: it sets `final_score` to **0** and locks the tier to **Not Suitable**, overriding the TF-IDF score entirely. When no knockout fires, the final score blends TF-IDF with the skill-coverage bonus:
 
 ```
 final_score = 0.70 × normalised_TF-IDF + 0.30 × rubric_score
 ```
 
-The 70/30 blend retains the content-based signal as dominant while allowing structured criteria to adjust rankings. If no structured JD is used (plain paste/upload), rubric scoring is skipped and the normalised TF-IDF score is used directly.
+The 70/30 split keeps the content-based signal dominant while letting required-skill coverage adjust rankings. If no structured JD is used (plain paste/upload), rubric scoring is skipped entirely and the normalised TF-IDF score is used directly.
 
 ---
 
@@ -207,7 +224,7 @@ The thresholds are relative (applied to the normalised score), so they remain me
 
 **Skill extraction:** A keyword list (`data/skills.txt`, ~200 entries) is matched against raw resume text using case-insensitive whole-word regex. Skills are grouped as matched (found in resume) vs missing (in JD skill list but absent from resume) for gap analysis.
 
-**Name extraction:** spaCy's `en_core_web_sm` NER model labels named entities. The first `PERSON`-labelled entity in the resume is taken as the candidate name. This covers most Western and South Asian name formats that appear near the top of a resume. If no PERSON entity is found, the filename is used as a fallback.
+**Name extraction:** spaCy's `en_core_web_sm` NER model scans the **first 200 characters** of the resume for a `PERSON`-labelled entity — a window chosen for speed, though it means names placed after a long header block can be missed. If no entity is found there, a regex fallback looks for a line matching 2–4 capitalised words. If both methods come up empty, `candidate.name` stays `None`, and the Results and Bias Audit pages fall back to displaying the filename instead.
 
 ---
 
@@ -227,7 +244,7 @@ The audit runs automatically after every analysis and covers four dimensions.
 
 **Inference (two-stage):**
 
-1. **Name lookup** — a curated dictionary of ~60 common first names mapped to Male/Female. The candidate's extracted first name is looked up; if found, inference is marked as `name_lookup`.
+1. **Name lookup** — a curated dictionary of 92 common first names (48 male, 44 female — a mix of Western and Indian names) mapped to Male/Female. The candidate's extracted first name is looked up; if found, inference is marked as `name_lookup`.
 2. **Pronoun scan fallback** — if the name is not in the dictionary, the raw resume text is scanned for gendered pronouns: `he/him/his` → Male, `she/her/hers` → Female. A minimum of 2 occurrences and a clear majority (no tie) is required. Method marked as `pronoun_scan`.
 3. If neither method yields a result, the candidate is marked `Unknown`.
 
@@ -236,20 +253,20 @@ The audit runs automatically after every analysis and covers four dimensions.
 **Disparity detection:**
 
 - Mean normalised score is computed per inferred gender group.
-- Groups with fewer than 5 candidates are flagged as low-sample (estimates unreliable).
-- **Mann-Whitney U test** is used when exactly two known groups exist; **Kruskal-Wallis H test** is used for three or more. Both are non-parametric (no normality assumption).
-- **pp-gap** = absolute difference between the two highest group means, in percentage points.
-- **Disparate Impact Ratio (DIR)** = min(group_mean) / max(group_mean). A DIR < 0.80 is the configured threshold.
-- Bias is first considered when pp-gap > 10 OR DIR < 0.80; if a p-value is available and p ≥ 0.05, the bias flag is cleared. In practice, the effective statistical threshold is p < 0.05.
+- Groups with fewer than 5 candidates are flagged as low-sample, since their estimates aren't reliable.
+- **Mann-Whitney U** is used when exactly two known groups exist; **Kruskal-Wallis H** is used for three or more. Both are non-parametric and require no assumption of normality.
+- **pp-gap** = difference between the **highest and lowest** group means, in percentage points, computed across groups with at least 3 candidates each.
+- **Disparate Impact Ratio (DIR)** = min(group_mean) / max(group_mean). A DIR below 0.80 is the standard EEOC four-fifths rule threshold for adverse impact.
+- A candidate flag (pp-gap > 10 or DIR < 0.80) is only retained once the statistical test confirms significance at p < 0.05; below that threshold, the disparity is treated as noise rather than bias.
 
-**Counterfactual correction (when bias detected):**
+**Counterfactual correction** runs once bias is detected:
 
-1. All candidate name tokens are replaced with `[CANDIDATE]` in the raw text.
-2. The masked resumes are re-scored against the JD using the same TF-IDF pipeline.
-3. The corrected score = average of original score and masked score.
-4. Up to 3 iterative correction rounds are applied until the per-candidate delta < 2 pp.
+1. Every occurrence of a candidate's name is masked to `[CANDIDATE]` in the raw text.
+2. The masked resumes are re-scored against the JD through the same TF-IDF pipeline.
+3. The corrected score is the average of the original and masked scores.
+4. Up to 3 iterative rounds run until the per-candidate delta drops below 2 pp.
 
-The correction neutralises any name-vocabulary leakage into the cosine similarity signal.
+This neutralises any name-vocabulary leakage into the cosine similarity signal — cases where the name itself (rather than the resume's substance) was nudging the score.
 
 ### Career Gap Dimension
 
@@ -261,15 +278,15 @@ The correction neutralises any name-vocabulary leakage into the cosine similarit
 
 ### Institution Tier Dimension
 
-A curated list of top-tier institutions (QS World Rankings top-200 plus prominent Indian institutions — IITs, IIMs, NITs) is matched against raw resume text. Candidates are grouped as Tier 1 / Other.
+A hand-curated list of roughly 76 institutions (`data/institution_tiers.txt`) is matched against raw resume text via case-insensitive substring search: every IIT, IIM, NIT, and IIIT, a handful of other well-known Indian institutes (BITS, ISI, TIFR, CMI), and around 28 prominent global universities (MIT, Stanford, Oxford, ETH Zurich, and similar). Candidates whose resume text matches an entry are grouped as "Top"; candidates with education-section keywords but no match are grouped as "Other"; candidates with neither are "Unknown" and excluded from the comparison.
 
 Flags if Tier 1 graduates score significantly higher after controlling for content similarity, suggesting the JD vocabulary may inadvertently favour elite institution terminology.
 
 ### Socio-Cultural Dimension (India-specific)
 
-A surname lookup database maps last names to:
-- **Region proxy**: North / South / East / West India
-- **Religion proxy**: Hindu / Muslim / Christian / Sikh / Other
+A surname lookup database (`data/indian_surname_proxy.csv`) maps last names to:
+- **Region proxy**: North / South / East / West / Northeast India
+- **Religion proxy**: Hindu / Muslim / Sikh / Christian / Jain / Zoroastrian / Other
 - **Caste group proxy**: General / OBC / SC / ST / Unknown
 
 Each sub-dimension runs an independent Kruskal-Wallis test. If caste-group disparity is detected, the audit surfaces India's constitutional reservation framework (Articles 15 and 16) as context.
@@ -292,7 +309,7 @@ A persistent top navigation bar (rendered in every page via `app.py`) uses `st.p
 
 **Design system:** flat, sharp-cornered enterprise design (no border-radius), navy `#0c1a2e` brand + gold `#C8970A` accent, page background `#f2f5f9`.
 
-**Authentication:** login-gated via `streamlit-authenticator`; credentials stored as bcrypt hashes in `config.yaml`; 30-day session cookies.
+**Authentication:** login-gated via `streamlit-authenticator`; credentials stored as bcrypt hashes in `config.yaml`; 7-day session cookies by default (configurable via `cookie.expiry_days` in `config.yaml`).
 
 ---
 
@@ -414,7 +431,7 @@ py -3.11 -m pytest
 - **Vocabulary sensitivity**: Candidates who use the exact keywords from the JD score higher than equally-qualified candidates who paraphrase. This is a known limitation of bag-of-words models.
 - **Bias audit sample size**: Statistical reliability requires n > 30 per group. At demo scale (15 resumes), results are indicative only. A production deployment should use Fairlearn or AI Fairness 360 with continuous monitoring.
 - **Socio-cultural proxies**: Surname-to-group mappings are approximate and will be wrong for diaspora names, transliterated variations, and cross-community marriages.
-- **Gender inference**: The name dictionary covers ~60 entries. The pronoun-scan fallback requires explicit pronoun use in the resume text, which many candidates omit.
+- **Gender inference**: The name dictionary covers 92 entries. The pronoun-scan fallback requires explicit pronoun use in the resume text, which many candidates omit.
 - **English only**: The preprocessing pipeline (spaCy `en_core_web_sm`, NLTK English stopwords) is designed for English-language resumes and JDs only.
 
 ---
